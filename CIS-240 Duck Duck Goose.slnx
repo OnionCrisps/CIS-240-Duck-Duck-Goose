@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="CIS-240 Duck Duck Goose.vcxproj" />
+  <Project Path="CIS-240 Duck Duck Goose.vcxproj" Id="cad8c2e6-4401-4d74-a0bf-cd27309462f4" />
 </Solution>

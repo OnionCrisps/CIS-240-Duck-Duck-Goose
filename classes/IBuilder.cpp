@@ -52,7 +52,7 @@ void IBuilder::displayMenu(const vector<string>& menuData,
 
 void IBuilder::setCursorPosition(int x, int y)
 {
-	COORD pos = { (SHORT)&x, (SHORT)&y }; // cast to shorts, *see wincontypes.h 
+	COORD pos = { (SHORT)x, (SHORT)y }; // cast to shorts, *see wincontypes.h 
 
 	//sCCP takes  HANDLE and COORD arguments
 	SetConsoleCursorPosition(hConsole, pos);
