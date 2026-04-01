@@ -13,6 +13,34 @@ T DCList::peek(int index) const
 		return ptr->data;
 	}
 }
+
+bool DCList::replace(const T& data, const int element)
+{
+	const int count = getSize();
+
+	if (element >= 0 && element < count) 
+	{
+		if (element <= (count / 2))
+		{
+			Node* ptr = first;
+			for (int i = 0; i < element; i++)
+			{
+				ptr = ptr->next;
+			}
+			ptr->data = data;
+			return true;
+		}
+		else {
+			Node* ptr = first->prev; // last element
+			for (int i = count - 1; i > element; i--) {
+				ptr = ptr->prev;
+			}
+			ptr->data = data;
+			return true;
+		}
+	}
+	return false;
+}
 /**
 
 LinkedList::LinkedList()

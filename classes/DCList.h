@@ -21,8 +21,29 @@ public:
 	bool isFull() const;
 	//------------------------------------------------------------------------------------------
 	//GAVIN:
+
+	/**
+	 * @brief  Provides the data at a certain element in the list.
+	 *
+	 * @param element	The element the data is being inserted at.
+	 * @return			Type T, the data at the specified position.
+	 *
+	 * @note
+	 *
+	*/
 	T peek(const int) const;
-	bool replace(const T&, const int); // replacing the data in a specified node with new data.
+
+	/**
+	 * @brief  Replaces the data at the chosen position.
+	 *
+	 * @param data		Data being inserted.
+	 * @param element	The element the data is being inserted at.
+	 * @return			True or false.
+	 *
+	 * @note  
+	 *       
+	*/
+	bool replace(const T&, const int);
 	bool insert(const T&, const int);
 	bool remove(const int);
 	const DCList& operator=(const DCList&);
@@ -31,7 +52,7 @@ public:
 	//-------------------------------------------------------------------------------------------
 private:
 	Node* first; // pointer to the first element of the linked list
-	int count;
+	int size; //count
 };
 
 
