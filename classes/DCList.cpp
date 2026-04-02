@@ -14,16 +14,15 @@ T DCList::peek(int index) const
 	}
 }
 
-bool DCList::replace(const T& data, const int element)
+bool DCList::replace(const T& data, const int index)
 {
-	const int count = getSize();
 
-	if (element >= 0 && element < count) 
+	if (index >= 0 && index < size) 
 	{
-		if (element <= (count / 2))
+		if (index <= (size / 2))
 		{
 			Node* ptr = first;
-			for (int i = 0; i < element; i++)
+			for (int i = 0; i < index; i++)
 			{
 				ptr = ptr->next;
 			}
@@ -32,7 +31,7 @@ bool DCList::replace(const T& data, const int element)
 		}
 		else {
 			Node* ptr = first->prev; // last element
-			for (int i = count - 1; i > element; i--) {
+			for (int i = size - 1; i > index; i--) {
 				ptr = ptr->prev;
 			}
 			ptr->data = data;
@@ -41,95 +40,105 @@ bool DCList::replace(const T& data, const int element)
 	}
 	return false;
 }
-/**
 
-LinkedList::LinkedList()
+bool DCList::insert(const T& data, const int index)
 {
-	first = nullptr;
-	count = 0;
-}
+	if (isFull() || index < 0 || index > size) return false;
 
-LinkedList::~LinkedList()
-{
-	while (!isEmpty())
+
+	Node* ptr = new Node(data);
+	Node* predecessor;
+
+	if (first==nullptr)
 	{
-		remove(0);
+		ptr->next = ptr->prev = ptr;
+		first = ptr;
+
+		size++;
+		return true;
 	}
-}
 
-LinkedList::LinkedList(const LinkedList& source)
-{
-	if (!source.isEmpty())
+	if (index == 0)
 	{
-		first = new Node(source.first->data);
+		Node* tail = first->prev;
 
-		Node* srcPtr = source.first->next;
-		Node* ptr = first;
+		ptr->next = first;
+		ptr->prev = tail;
 
-		while (srcPtr != nullptr)
-		{
-			ptr->next = new Node(srcPtr->data);
-			srcPtr = srcPtr->next;
-			ptr = ptr->next;
-		}
-		count = source.count;
-	}
-}
+		first->prev = ptr;
+		tail->next = ptr;
+		first = ptr;
 
-LinkedList& LinkedList::operator=(const LinkedList& source)
-{
-	if (this != &source)
+	} 
+	else if (index < (size / 2))
 	{
-		// removing all nodes
-		while (!isEmpty())
-		{
-			remove(0);
-		}
+		predecessor = first;
 
-		if (!source.isEmpty())
-		{
-			first = new Node(source.first->data);
-			Node* srcPtr = source.first->next;
-			Node* ptr = first;
-
-			while (srcPtr != nullptr)
-			{
-				ptr->next = new Node(srcPtr->data);
-				srcPtr = srcPtr->next;
-				ptr = ptr->next;
-			}
-			count = source.count;
-		}
-	}
-	return *this;
-}
-bool LinkedList::insert(type d, int index)
-{
-	// check if the list is full and index is valid
-	if (isFull() || index < 0 || index > count) return false;
-
-	Node* ptr = new Node(d);
-	if (index == 0) // when inserting data as the first node
-	{
-		ptr->next = first; // the old first node becomes the second node
-		first = ptr;  // the new node becomes the first node
-	}
-	else // inserting elsewhere in the list
-	{
-		// getting to the predecessor node
-		Node* predecessor = first;
 		for (int i = 0; i < index - 1; i++)
 		{
-			predecessor = predecessor->next;
+				predecessor = predecessor->next;
 		}
+		ptr->next = predecessor->next;
+		predecessor->next = ptr;
 
-		ptr->next = predecessor->next; // the node after the predecessor node should now come after the new node
-		predecessor->next = ptr; // the new node now comes after the predecessor node.
+		ptr->prev = predecessor;
+		ptr->next->prev = ptr;
+
+	} else {
+		predecessor = first->prev;
+		for (int i = size - 1; i >= index; i--)
+		{
+			predecessor = predecessor->prev;
+		}
+		ptr->next = predecessor->next;
+		predecessor->next = ptr;
+
+		ptr->prev = predecessor;
+		ptr->next->prev = ptr;
 	}
-	count++;
+
+
+	size++;
 	return true;
 }
 
+bool DCList::remove(const int index)
+{
+	if (isEmpty() || index < 0 || index >= size) return false;
+	
+	Node* target = (index < (size/2)) ? first : first->prev;
+	Node* predecessor = nullptr;
+
+	if (index == 0)
+	{
+		first = first->next;
+	}
+	else if (index >= (size / 2))
+	{
+		for (int i = size - 1; i > index; i--)
+		{
+			target = target->prev;
+		}
+
+		target->prev->next = target->next;
+		target->next->prev = target->prev;
+	}
+	else {
+		// getting the pointers to the nodes.
+		for (int i = 0; i < index; i++)
+		{
+			predecessor = target;
+			target = target->next;
+		}
+		predecessor->next = target->next;
+	}
+
+	delete target;
+	size--;
+	return true;
+
+}
+/**
 bool LinkedList::remove(int index)
 {
 	// check if the list is empty and index is valid
@@ -147,9 +156,33 @@ bool LinkedList::remove(int index)
 		// getting the pointers to the nodes.
 		for (int i = 0; i < index; i++)
 		{
+		remove(3)
+		A->B->C->D->E
+		0  1  2  3  4
+		i = 0, i < 3
+		i = 0:
+		pred = target = first = 0;
+		target = 0->next = 1;
+		i++;
+		i = 1;
+		pre = target = 1;
+		target = 1->next = 2;
+		i++;
+		i = 2;
+		pre = target = 2;
+		target = 2->next = 3;
+		i++;
+		i = 3 = break;
+
+		target = 3, pre = 2
+
+
 			predecessor = target;
 			target = target->next;
 		}
+		pre->next is 3, target->next is 4
+		so 3 = 4
+
 		predecessor->next = target->next; //the node right after the target node now comes after the predecessor node
 	}
 	delete target; // deallocate the node
