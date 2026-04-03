@@ -10,9 +10,21 @@
 
 class IBuilder {
 private:
-    std::vector<std::string> menuOptions;
-    std::vector<std::function<void()>> menuFunctions;
-    HANDLE hConsole;  // add this
+    
+    /**
+     * @brief Holds the strings for the interface options.
+     */
+    std::vector<std::string> options;
+    
+    /**
+     * @brief Holds the functions for the interface as they correspond to each option.
+     */
+    std::vector<std::function<void()>> functions;
+
+    /**
+     * @brief A Windows console handle (HANDLE) that represents an opaque handle to a console input or output buffer used with Win32 console APIs.
+     */
+    HANDLE hConsole;
 
     bool isCentered = true;
 
@@ -28,9 +40,9 @@ public:
     int getConsoleWidth() const;
     int getConsoleHeight() const;
 
-    void push_toOptions(const std::vector<std::string>&);
-    void push_Functions(std::function<void()>);
-    void push_Functions(const std::vector<std::function<void()>>& f);
+    void pushToOptions(const std::vector<std::string>&);
+    void pushToFunctions(std::function<void()>);
+    void pushToFunctions(const std::vector<std::function<void()>>& f);
     void buildMenu();
 
     IBuilder();

@@ -84,24 +84,24 @@ int IBuilder::getConsoleHeight() const
 	return (bufferInfo.srWindow.Bottom - bufferInfo.srWindow.Top + 1);
 }
 
-void IBuilder::push_toOptions(const vector<string>& items)
+void IBuilder::pushToOptions(const vector<string>& items)
 {
 	//allows the user to choose what the menus actually say
-	menuOptions = items;
+	options = items;
 
 	return;
 }
 
-int IBuilder::_get_len_FromOptions() const { return menuOptions.size(); }
+int IBuilder::_get_len_FromOptions() const { return options.size(); }
 
-void IBuilder::push_Functions(function<void()> func)
+void IBuilder::pushToFunctions(function<void()> sourceFunc)
 {
-	menuFunctions.push_back(func);
+	functions.push_back(sourceFunc);
 }
 
-void IBuilder::push_Functions(const vector<function<void()>>& f)
+void IBuilder::pushToFunctions(const vector<function<void()>>& sourceFunc)
 {
-	menuFunctions = f;
+	functions = sourceFunc;
 }
 
 
@@ -130,7 +130,7 @@ void IBuilder::buildMenu()
 			}
 			else if (key == ENTER_KEY) {
 				clearScreen();
-				menuFunctions[selected]();
+				functions[selected]();
 				system("pause");
 
 				lastSelection = -1; // force redraw
@@ -139,7 +139,7 @@ void IBuilder::buildMenu()
 
 		if (selected != lastSelection || width != prev_W || height != prev_H) {
 			clearScreen();
-			displayMenu(menuOptions, selected, width, height);
+			displayMenu(options, selected, width, height);
 			lastSelection = selected;
 			prev_W = width;
 			prev_H = height;
@@ -161,6 +161,6 @@ IBuilder::IBuilder(bool center)
 }
 
 IBuilder::IBuilder(std::vector<std::string> data)
-	: menuOptions(data), isCentered(true), hConsole(GetStdHandle(STD_OUTPUT_HANDLE))
+	: options(data), isCentered(true), hConsole(GetStdHandle(STD_OUTPUT_HANDLE))
 {
 }
