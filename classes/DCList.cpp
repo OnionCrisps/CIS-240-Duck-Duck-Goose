@@ -5,12 +5,7 @@ T DCList::peek(int index) const
 	if (isEmpty()) return T();
 	else
 	{
-		Node* ptr = first; //first index (CAN BE VIEWED AS FIRST ELEMENT IN THE LIST OR ID:0) is ptr->first
-		for (int i = 0; i < index; i++)
-		{
-			ptr = ptr->next;
-		}
-		return ptr->data;
+		return retrieveAt(index)->data;
 	}
 }
 
@@ -138,93 +133,76 @@ bool DCList::remove(const int index)
 	return true;
 
 }
-/**
-bool LinkedList::remove(int index)
-{
-	// check if the list is empty and index is valid
-	if (isEmpty() || index < 0 || index >= count) return false;
-
-	Node* target = first;
-	if (index == 0) // when removing the first node
+const DCList& DCList::operator=(const DCList& source) {
+	if (this != &source)
 	{
-		first = first->next; // the second node now becomes the new first node.
-	}
-	else // when removing node from elsewhere in the list
-	{
-		Node* predecessor = nullptr;
-
-		// getting the pointers to the nodes.
-		for (int i = 0; i < index; i++)
+		//delete all nodes in the current object
+		while (!isEmpty())
 		{
-		remove(3)
-		A->B->C->D->E
-		0  1  2  3  4
-		i = 0, i < 3
-		i = 0:
-		pred = target = first = 0;
-		target = 0->next = 1;
-		i++;
-		i = 1;
-		pre = target = 1;
-		target = 1->next = 2;
-		i++;
-		i = 2;
-		pre = target = 2;
-		target = 2->next = 3;
-		i++;
-		i = 3 = break;
-
-		target = 3, pre = 2
-
-
-			predecessor = target;
-			target = target->next;
+			remove(0);
 		}
-		pre->next is 3, target->next is 4
-		so 3 = 4
-
-		predecessor->next = target->next; //the node right after the target node now comes after the predecessor node
-	}
-	delete target; // deallocate the node
-	count--;
-	return true;
-}
-
-
-bool LinkedList::isEmpty() const
-{
-	return first ==nullptr;
-}
-
-bool LinkedList::isFull() const
-{
-	Node* temp = new Node(type());
-	if (temp == nullptr) return true;
-	else
-	{
-		delete temp;
-		return false;
-	}
-}
-
-type LinkedList::peek(int index) const
-{
-	if (isEmpty() || index < 0 || index >= count)
-		return type();
-	else
-	{
-		Node* ptr = first;
-		for (int i = 0; i < index; i++)
+		//build up the current object from the source object.
+		if (!source.isEmpty())
 		{
-			ptr = ptr->next;
+			first = new Node(source.first->data);
+			Node* srcPtr = source.first->next;
+			Node* ptr = first;
+
+			while (srcPtr != nullptr)
+			{
+				ptr->next = new Node(srcPtr->data);
+				srcPtr = srcPtr->next;
+				ptr = ptr->next;
+			}
+			size = source.size;
 		}
-		return ptr->data;
 	}
+
+	return *this;
+
 }
 
-int LinkedList::getCount() const
+void DCList::display(std::ostream& out) const
 {
-	return count;
+	Node* ptr = first;
+	out << "LIST CONTENT: "<<std::endl;
+	for (int i = 0; i < size; i++)
+	{
+		out 
+			<< "Element " << i+1 << ": " 
+			<< ptr->data << " at address: " 
+			<< ptr << " | Prev: (" << ptr->data <<" @ "<< ptr->prev <<") | Next: ("
+			<< ptr->next->data <<" @ " << ptr->next <<")"<< std::endl;
+		ptr = ptr->next;
+	}
+	out << "First Element: "<< first->data <<" @ " << first << std::endl;
+	out << "Last Element: " << first->prev->data << " @ " << first->prev << std::endl;
+}
+void DCList::display(std::ostream& out, int index) const
+{
+	out << peek(index) << std::endl;
 }
 
-*/
+T& DCList::operator[](int index)
+{
+	return retrieveAt(index)->data;
+}
+const T& DCList::operator[](int index) const
+{
+	return retrieveAt(index)->data;
+}
+std::ostream& operator<<(std::ostream& out, const DCList& content)
+{
+	content.display(out);
+	return out;
+}
+
+DCList::Node* DCList::retrieveAt(int index) const
+{
+	Node* ptr = first; //first index is ptr->first
+	for (int i = 0; i < index; i++)
+	{
+		ptr = ptr->next;
+	}
+	return ptr;
+}

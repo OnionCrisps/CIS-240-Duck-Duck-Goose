@@ -1,7 +1,7 @@
 //using DOXYGEN comments for documentation.
 #pragma once
 #include<string>
-#include<iostream>
+#include<ostream>
 
 typedef std::string T;
 
@@ -12,6 +12,16 @@ private:
 		T data;
 		Node* next, * prev;
 	};
+
+	/**
+	 * @brief			Retreive a node at an index. Used in peek() and subscript operator overloads.
+	 * @param index		Specific index to retreive at.
+	 * @return Node*
+	 */
+	Node* retrieveAt(int index) const;
+
+	Node* first; // first element; change this when the head of the list is updated.
+	int size;
 public:
 	DCList();
 	DCList(const DCList&);
@@ -20,13 +30,15 @@ public:
 	bool isEmpty() const;
 	bool isFull() const;
 
+	//-------------------//
+
 	/**
 	 * @brief  Provides the data at a certain element in the list.
 	 *
 	 * @param index		The position of the data being returned.
 	 * @return			Type T, the data at the specified position.
 	 *
-	 * @note
+	 * @note			Uses the private helper function retreiveAt(int) to traverse and return the data at the index.
 	 *
 	*/
 	T peek(const int) const;
@@ -59,15 +71,48 @@ public:
 	 */
 	bool remove(const int);
 
+	/**
+	 * @brief			Assignment operator overload.
+	 * @param source	Constant object reference. 
+	 * @return			This object reference.
+	 */
 	const DCList& operator=(const DCList&);
 
+	/**
+	 * @brief						Displays the whole content of the List.
+	 * @param std::ostream& out		Output stream object.
+	 * @return void
+	 */
 	void display(std::ostream&) const;
 
+	/**
+	 * @brief						Displays the data at the specified index.
+	 * @param std::ostream& out		Output stream operator.
+	 * @param int index				Specific index of the data.
+	 */
+	void display(std::ostream&, int) const;
+
+	/**
+	 * @brief							Output stream operator overload.
+	 * @param std::ostream& out			Output stream object.  
+	 * @param const DCList& content		Constant class reference. Used to represent outputted data.
+	 * @return std::ostream& 
+	 */
 	friend std::ostream& operator<< (std::ostream&, const DCList&);
 
-private:
-	Node* first; // pointer to the first element of the linked list
-	int size;
+	/**
+	 * @brief			Subscript operator overload.
+	 * @param index		Specific subscript.
+	 * @return T& 
+	 */
+	T& operator[](int index);
+	/**
+	 * @brief			Subscript operator overload (constant compliance).
+	 * @param index		Specific subscript. 
+	 * @return const T& 
+	 */
+	const T& operator[](int index) const;
+
 };
 
 
