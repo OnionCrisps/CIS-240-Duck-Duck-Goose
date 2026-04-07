@@ -20,11 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="classes\DCList.cpp" />
+    <ClCompile Include="classes\Game.cpp" />
     <ClCompile Include="classes\IBuilder.cpp" />
     <ClCompile Include="src\test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="classes\DCList.h" />
+    <ClInclude Include="classes\Game.h" />
     <ClInclude Include="classes\IBuilder.h" />
   </ItemGroup>
   <ItemGroup>
