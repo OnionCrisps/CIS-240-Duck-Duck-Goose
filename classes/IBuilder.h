@@ -27,9 +27,22 @@ private:
     HANDLE hConsole;
 
     bool isCentered = true;
+    int _prevWidth = 0;
+    int _prevHeight = 0;
 
     void clearScreen();
     int _get_len_FromOptions() const;
+
+    //resize
+    bool isResized();
+    void updateSize();
+
+    //layout
+    int centerX(int width) const;
+    int centerY(int height) const;
+
+    float relativeX(float perc) const;
+    float relativeY(float perc) const;
 
 public:
     void displayMenu(const std::vector<std::string>& menuData, int selection, int w, int h);
@@ -44,6 +57,23 @@ public:
     void pushToFunctions(std::function<void()>);
     void pushToFunctions(const std::vector<std::function<void()>>& f);
     void buildMenu();
+
+
+    //geometric
+    void drawBox(int x, int y, int width, int height);
+    void horizontalLine(int x, int y, int width);
+    void verticalLine(int x, int y, int height);
+
+    //progress bar
+
+
+    //input
+
+
+    // table
+
+
+    // render engine
 
     IBuilder();
     IBuilder(bool);

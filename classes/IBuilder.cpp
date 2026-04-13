@@ -20,6 +20,44 @@ void IBuilder::clearScreen()
 	SetConsoleCursorPosition(hConsole, origin);
 }
 
+int IBuilder::_get_len_FromOptions() const { return options.size(); }
+
+
+bool IBuilder::isResized()
+{
+	int dW = getConsoleWidth(); //changed width
+	int dH = getConsoleHeight(); //changed height
+
+	return dW != _prevWidth || dH != _prevHeight;
+}
+
+void IBuilder::updateSize()
+{
+	_prevHeight = getConsoleHeight();
+	_prevWidth = getConsoleWidth();
+}
+
+//layout tools
+int IBuilder::centerX(int width) const
+{
+	return (getConsoleWidth() - width) / 2;
+}
+
+int IBuilder::centerY(int height) const
+{
+	return (getConsoleHeight() - height) / 2;
+}
+
+float IBuilder::relativeX(float perc) const
+{
+	return static_cast<int>(getConsoleWidth() * perc);
+}
+
+float IBuilder::relativeY(float perc) const
+{
+	return static_cast<int>(getConsoleHeight() * perc);
+}
+
 void IBuilder::displayMenu(const vector<string>& menuData,
 	int selection,
 	int w,
@@ -92,7 +130,6 @@ void IBuilder::pushToOptions(const vector<string>& items)
 	return;
 }
 
-int IBuilder::_get_len_FromOptions() const { return options.size(); }
 
 void IBuilder::pushToFunctions(function<void()> sourceFunc)
 {
@@ -109,7 +146,9 @@ void IBuilder::buildMenu()
 {
 	int selected = 0;
 	int maxSize = _get_len_FromOptions();
-	int prev_W = -1, prev_H = -1;
+
+	_prevWidth = -1, _prevHeight = -1;
+
 	int lastSelection = -1;
 	int width, height;
 	while (true) {
@@ -137,18 +176,22 @@ void IBuilder::buildMenu()
 			}
 		}
 
-		if (selected != lastSelection || width != prev_W || height != prev_H) {
+		if (selected != lastSelection || width != _prevWidth || height != _prevHeight) {
 			clearScreen();
 			displayMenu(options, selected, width, height);
 			lastSelection = selected;
-			prev_W = width;
-			prev_H = height;
+			_prevWidth = width;
+			_prevHeight = height;
 		}
 
 		Sleep(50);
 	}
 }
 
+void IBuilder::drawBox(int x, int y, int width, int height)
+{
+
+}
 
 IBuilder::IBuilder()
 	: isCentered(true), hConsole(GetStdHandle(STD_OUTPUT_HANDLE))
