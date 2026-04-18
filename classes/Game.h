@@ -1,8 +1,10 @@
 #pragma once
-#include "../classes/IBuilder.h"
 #include "../classes/DCList.h"
+#include <vector>
+#include <SDL.h>
+#include <SDL_audio.h>
 
-class Game : public IBuilder {
+class Game{
 private:
     enum Role
     {
@@ -22,6 +24,20 @@ private:
     DCList circle;
     std::vector<Player> cookingPot;
     int itIndex; // tracks who is "it" in the circle
+
+
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+
+    SDL_AudioDeviceID audioDevice = 0;
+
+    static constexpr int screenWidth = 800;
+    static constexpr int screenHeight = 600;
+
+    bool initSDL();     // init window, renderer, audio
+    void shutdownSDL(); // cleanup
+    void handleEvents(SDL_Event& e, bool& running);
+    void render();      // your draw calls go here
 
 public:
     Game();

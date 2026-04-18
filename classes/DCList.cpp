@@ -1,5 +1,18 @@
 #include "DCList.h"
+DCList::DCList() : first(nullptr), size(0) {}
 
+DCList::~DCList() {
+	// delete all nodes
+	// your cleanup logic here
+}
+
+bool DCList::isEmpty() const {
+	return size == 0;
+}
+
+bool DCList::isFull() const {
+	return false; // linked lists don't have a fixed capacity
+}
 T DCList::peek(int index) const
 {
 	if (isEmpty()) return T();
