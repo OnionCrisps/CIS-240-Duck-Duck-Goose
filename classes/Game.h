@@ -2,10 +2,17 @@
 #include "../classes/DCList.h"
 #include <vector>
 #include <SDL.h>
+#include <SDL_image.h>
 #include <SDL_audio.h>
 
 class Game{
 private:
+    typedef struct Sprite {
+        SDL_Texture* texture = nullptr;
+        int w;
+        int h;
+    };
+
     enum Role
     {
         TAPPER,
@@ -33,6 +40,8 @@ private:
 
     static constexpr int screenWidth = 800;
     static constexpr int screenHeight = 600;
+
+    Sprite loadSprite(const char* path, int w, int h);
 
     bool initSDL();     // init window, renderer, audio
     void shutdownSDL(); // cleanup

@@ -1,6 +1,9 @@
 #include "Game.h"
 #include <iostream>
 
+/*
+need to create a structure that has the menu options, keyboard presses, and then the sprites
+*/
 Game::Game() : round(0), itIndex(0) {
     if (!initSDL()) {
         std::cerr << "SDL failed to initialize: " << SDL_GetError() << "\n";
@@ -11,6 +14,23 @@ Game::~Game() {
     shutdownSDL();
 }
 
+
+Game::Sprite Game::loadSprite(const char* path, int w, int h)
+{
+    Sprite s;
+    s.texture = IMG_LoadTexture(renderer, path);
+    s.w = w;
+    s.h = h;
+
+    if (!s.texture) {
+        std::cerr << "Failed to load sprite" << path << ": " << IMG_GetError() << "\n";
+        return s;
+    }
+
+    SDL_QueryTexture(s.texture, nullptr, nullptr, &s.w, &s.h);
+    return s;
+
+}
 
 bool Game::initSDL() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
