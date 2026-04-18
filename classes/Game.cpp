@@ -56,6 +56,9 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
             case SDLK_ESCAPE:
                 running = false;
                 break;
+            case SDLK_w:
+                running = false;
+                break;
                 // add more key handling here as needed
             default:
                 break;
