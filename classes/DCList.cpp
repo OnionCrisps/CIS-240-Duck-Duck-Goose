@@ -1,4 +1,5 @@
 #include "DCList.h"
+DCList::DCList() : first(nullptr), size(0) {}
 
 DCList::DCList()
 {
