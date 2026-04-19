@@ -13,11 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{f624962f-1ab1-4465-ba88-f48edd17fe1d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="classes\IBuilder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -29,9 +29,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="classes\IBuilder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="classes\DCList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -41,5 +38,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\ui\backgroundpattern.png">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

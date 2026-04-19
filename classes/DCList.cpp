@@ -1,9 +1,17 @@
 #include "DCList.h"
 DCList::DCList() : first(nullptr), size(0) {}
 
+DCList::DCList(const DCList&)
+{}
+
 DCList::~DCList() {
 	// delete all nodes
 	// your cleanup logic here
+}
+
+int DCList::getSize() const
+{
+    return 0;
 }
 
 bool DCList::isEmpty() const {
