@@ -1,25 +1,50 @@
 #include "DCList.h"
 DCList::DCList() : first(nullptr), size(0) {}
 
-DCList::DCList(const DCList&)
-{}
+DCList::DCList()
+{
+    first = nullptr;
+    size = 0;
+}
 
-DCList::~DCList() {
-	// delete all nodes
-	// your cleanup logic here
+DCList::DCList(const DCList& source) {
+    first = nullptr;
+    size = 0;
+    if (source.isEmpty()) return;
+    for (int i = 0; i < source.size; i++) {
+        insert(source.peek(i), size); //add to the end
+    }
+}
+
+DCList::~DCList()
+{
+    while (!isEmpty()) {
+        remove(0);
+    }
 }
 
 int DCList::getSize() const
 {
-    return 0;
+    return size;
 }
 
-bool DCList::isEmpty() const {
-	return size == 0;
+bool DCList::isEmpty() const
+{
+    return(size == 0);
 }
 
-bool DCList::isFull() const {
-	return false; // linked lists don't have a fixed capacity
+bool DCList::isFull() const
+{
+    {
+        Node* temp = new Node(T());
+        if (temp == nullptr) return true;
+        else
+        {
+            delete temp;
+            return false;
+        }
+    }
+
 }
 T DCList::peek(int index) const
 {
@@ -228,55 +253,4 @@ DCList::Node* DCList::retrieveAt(int index) const
 	return ptr;
 }
 
-DCList::DCList()
-{
-	first = nullptr;
-	size = 0;
-
-}
-
-DCList::DCList(const DCList&source)
-{
-	first = nullptr;
-	size = 0;
-
-	if (source.isEmpty()) return;
-
-	for (int i = 0; i < source.size; i++) {
-		insert(source.peek(i), i);
-	}
-
-
-}
-
-DCList::~DCList()
-{
-	while (!isEmpty()) {
-		remove(0);
-	}
-}
-
-int DCList::getSize() const
-{
-	return size  ;
-}
-
-bool DCList::isEmpty() const
-{
-	return(size == 0);
-}
-
-bool DCList::isFull() const
-{
-	{
-		Node* temp = new Node(T());
-		if (temp == nullptr) return true;
-		else
-		{
-			delete temp;
-			return false;
-		}
-	}
-
-}
 
