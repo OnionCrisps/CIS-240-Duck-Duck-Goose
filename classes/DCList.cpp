@@ -1,5 +1,4 @@
 #include "DCList.h"
-DCList::DCList() : first(nullptr), size(0) {}
 
 DCList::DCList()
 {
@@ -17,7 +16,7 @@ DCList::DCList(const DCList& source) {
 }
 
 DCList::~DCList()
-{
+{//scalar deleting destructor unsigned int (warning?) in disassembly view
     while (!isEmpty()) {
         remove(0);
     }
@@ -145,67 +144,70 @@ bool DCList::insert(const T& data, const int index)
 
 bool DCList::remove(const int index)
 {
-	if (isEmpty() || index < 0 || index >= size) return false;
-	
-	Node* target = (index < (size/2)) ? first : first->prev;
-	Node* predecessor = nullptr;
+    if (isEmpty() || index < 0 || index >= size) return false;
 
-	if (index == 0)
-	{
-		first = first->next;
-	}
-	else if (index >= (size / 2))
-	{
-		for (int i = size - 1; i > index; i--)
-		{
-			target = target->prev;
-		}
+    Node* target = (index < (size/2)) ? first : first->prev;
 
-		target->prev->next = target->next;
-		target->next->prev = target->prev;
-	}
-	else {
-		// getting the pointers to the nodes.
-		for (int i = 0; i < index; i++)
-		{
-			predecessor = target;
-			target = target->next;
-		}
-		predecessor->next = target->next;
-	}
+    // find the actual target
+    if (index == 0) {
+        target = first;
+    } else if (index >= (size / 2)) {
+        for (int i = size - 1; i > index; --i)
+            target = target->prev;
+    } else {
+        Node* predecessor = first;
+        for (int i = 0; i < index - 1; ++i)
+            predecessor = predecessor->next;
+        target = predecessor->next;
+    }
 
-	delete target;
-	size--;
-	return true;
+    if (size == 1) {
+        // deleting the only node
+        delete target;
+        first = nullptr;
+        size = 0;
+        return true;
+    }
 
+    // unlink target
+    target->prev->next = target->next;
+    target->next->prev = target->prev;
+
+    if (target == first) {
+        first = target->next; // update head if needed
+    }
+
+    delete target;
+    --size;
+    return true;
 }
 const DCList& DCList::operator=(const DCList& source) {
-	if (this != &source)
-	{
-		//delete all nodes in the current object
-		while (!isEmpty())
-		{
-			remove(0);
-		}
-		//build up the current object from the source object.
-		if (!source.isEmpty())
-		{
-			first = new Node(source.first->data);
-			Node* srcPtr = source.first->next;
-			Node* ptr = first;
+    if (this == &source) {return *this;}
 
-			while (srcPtr != nullptr)
-			{
-				ptr->next = new Node(srcPtr->data);
-				srcPtr = srcPtr->next;
-				ptr = ptr->next;
-			}
-			size = source.size;
-		}
-	}
+    // clear current
+    while (!isEmpty()) remove(0);
 
-	return *this;
+    if (source.isEmpty()){return *this;}
 
+    // copy first
+    first = new Node{source.first->data, nullptr, nullptr};
+    Node* srcPtr = source.first->next;
+    Node* dst = first;
+
+    // create remaining nodes until we circle back to source.first
+    while (srcPtr != source.first) {
+        Node* newNode = new Node{srcPtr->data, nullptr, dst};
+        dst->next = newNode;
+        dst = newNode;
+        srcPtr = srcPtr->next;
+    }
+
+    // close the circle
+    dst->next = first;
+    first->prev = dst;
+
+    size = source.size;
+    return *this;
 }
 
 void DCList::display(std::ostream& out) const
@@ -217,7 +219,7 @@ void DCList::display(std::ostream& out) const
 		out 
 			<< "Element " << i+1 << ": " 
 			<< ptr->data << " at address: " 
-			<< ptr << " | Prev: (" << ptr->data <<" @ "<< ptr->prev <<") | Next: ("
+			<< ptr << " | Prev: (" << ptr->prev->data <<" @ "<< ptr->prev <<") | Next: ("
 			<< ptr->next->data <<" @ " << ptr->next <<")"<< std::endl;
 		ptr = ptr->next;
 	}
@@ -252,5 +254,6 @@ DCList::Node* DCList::retrieveAt(int index) const
 	}
 	return ptr;
 }
+
 
 

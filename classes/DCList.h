@@ -44,7 +44,7 @@ public:
 	T peek(const int) const;
 
 	/**
-	 * @brief  Replaces the data at the chosen position.
+	 * @brief  Replaces the data at thechosen position.
 	 *
 	 * @param data		The new data.
 	 * @param index		The position of the data being replaced.
@@ -114,5 +114,4 @@ public:
 	const T& operator[](int index) const;
 
 };
-
 
