@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <commdlg.h>
 
+/*Gavin Harban, Jon Moore, Game.h CIS 240-1 Data Structures Project*/
+
 #pragma comment(lib, "comdlg32.lib")
 /*
 need to create a structure that has the menu options, keyboard presses, and then the sprites
@@ -99,13 +101,9 @@ void Game::initAssets()
     assets.playButton.hover = loadSprite("assets/ui/play_button_hover.png", 1.0f);
     assets.playButton.rect = {222, 198, 372, 102};
 
-    assets.optionsButton.normal = loadSprite("assets/ui/options_button.png", 1.0f);
-    assets.optionsButton.hover = loadSprite("assets/ui/options_button_hover.png", 1.0f);
-    assets.optionsButton.rect = {17, 337, 362, 162};
-
     assets.quitButton.normal = loadSprite("assets/ui/quit_button.png", 1.0f);
     assets.quitButton.hover = loadSprite("assets/ui/quit_button_hover.png", 1.0f);
-    assets.quitButton.rect = {428, 385, 372, 126};
+    assets.quitButton.rect = {228, 385, 372, 126};
 
     //setup screen
 
@@ -300,34 +298,102 @@ void Game::updateITWalkerTarget() {
     itWalkerTargetY = cy + outerRadius * sin(step * selectedIndex) - 16;
 }
 
+void Game::updateGooseWalkerTarget() {
+    int cx = (baseWidth / 2) - 10;
+    int cy = static_cast<int>(circleCY);
+    double step = (2.0 * M_PI) / circle.getSize();
+    double outerRadius = circleRadius + 40.0;
+
+    gooseWalkerTargetX = cx + outerRadius * cos(step * gooseWalkerIndex) - 16;
+    gooseWalkerTargetY = cy + outerRadius * sin(step * gooseWalkerIndex) - 16;
+}
+
 bool Game::isHovered(const SDL_Rect& rect, int mx, int my) {//mouse hover checks
     return mx >= rect.x && mx <= rect.x + rect.w &&
         my >= rect.y && my <= rect.y + rect.h;
 }
 
 void Game::startNextRound() {
+    if (activePlayers.empty() || circle.getSize() == 0) {
+        state = GameState::SPLASH;
+        return;
+    }
+    if (itIndex >= (int)activePlayers.size()) itIndex = 0;
+
+    gooseLastStep = 0;
+    itChaseLastStep = 0;
+    chaseStartTime = 0;
+    chaseActive = false;
+    tapEnergy = 0.0f;
+
+    for (Player& p : activePlayers) {
+        p.anim = Animation();
+        p.status = DUCK;
+    }
+
     if (pendingElimination && eliminatedIndex >= 0) {
-        addToPot(activePlayers[eliminatedIndex]);
         activePlayers.erase(activePlayers.begin() + eliminatedIndex);
         circle.remove(eliminatedIndex);
-        // adjust itIndex if it shifted
         if (itIndex > eliminatedIndex) itIndex--;
         pendingElimination = false;
         eliminatedIndex = -1;
     }
-    // reset circle tween for new round
+
+    if (activePlayers.empty()) { state = GameState::SPLASH; return; }
+    if (itIndex >= (int)activePlayers.size()) itIndex = 0;
+
+    pendingItIndex = itIndex;
+    itIndex = 0;
+
     circleTargetRadius = 180.0f;
     circleTargetCY = 300.0f;
     circleTargetScale = 1.0f;
     cookingPotScroll = 0;
     spinIndex = 0;
     spinSpeed = 50;
-    spinStepsLeft = 20 + (circle.getSize() * 3) + itIndex;
+    spinStepsLeft = 20 + (circle.getSize() * 3) + pendingItIndex;
     isSpinning = true;
     playPhase = PlayPhase::SPINNING;
     state = GameState::PLAYING;
 }
 
+void Game::resetGame() {
+    // clear all players and data
+    activePlayers.clear();
+    cookingPot.clear();
+    circle.~DCList();
+    new (&circle) DCList();
+
+    // reset all game state
+    winnerName = "";
+    cookingPotScroll = 0;
+    configScroll = 0;
+    itIndex = 0;
+    gooseIndex = -1;
+    selectedIndex = 0;
+    pendingElimination = false;
+    eliminatedIndex = -1;
+    chaseActive = false;
+    barChangeCount = 0;
+    tapEnergy = 0.0f;
+    meterDecay = 0.002f;
+    activeCallout = CalloutType::NONE;
+    goingClockwise = true;
+    chaseStartTime = 0;
+
+    // reset tween
+    circleRadius = 180.0f; circleTargetRadius = 180.0f;
+    circleCY = 300.0f; circleTargetCY = 300.0f;
+    circleScale = 1.0f;   circleTargetScale = 1.0f;
+    itWalkerX = 0.0f;   itWalkerTargetX = 0.0f;
+    itWalkerY = 0.0f;   itWalkerTargetY = 0.0f;
+    gooseWalkerX = 0.0f;   gooseWalkerTargetX = 0.0f;
+    gooseWalkerY = 0.0f;   gooseWalkerTargetY = 0.0f;
+
+    playPhase = PlayPhase::CHOOSING_DIRECTION;
+    state = GameState::PLAYER_SETUP;
+    SDL_StartTextInput();
+}
 Game::Sprite Game::renderTextSprite(const std::string& text, SDL_Color color, int size) {
     Sprite s;
     SDL_Surface* surf = (size == 0) ? TTF_RenderText_Blended(font, text.c_str(), color) : TTF_RenderText_Blended(fontLarge, text.c_str(), color);
@@ -484,25 +550,16 @@ void Game::renderSplash() {
     SDL_SetTextureAlphaMod(assets.start.texture, 255); // reset after
 }
 
-void Game::renderMM()
-{
+void Game::renderMM() {
     SDL_Rect bg_dst = { 0, 0, 800, 600 };
     SDL_RenderCopy(renderer, assets.bgTile.texture, nullptr, &bg_dst);
 
-    SDL_Rect titleDst = {
-        52,   
-        33,
-        716,                         
-        128
-    };
+    SDL_Rect titleDst = { 52, 33, 716, 128 };
     SDL_RenderCopy(renderer, assets.mainMenuTitle.texture, nullptr, &titleDst);
 
     renderButton(assets.playButton);
-    renderButton(assets.optionsButton);
     renderButton(assets.quitButton);
-
 }
-
 void Game::renderSetup() {
     SDL_Rect bg_dst = { 0, 0, 800, 600 };
     SDL_RenderCopy(renderer, assets.bgTile.texture, nullptr, &bg_dst);
@@ -674,10 +731,37 @@ void Game::renderGame() {
         SDL_RenderFillRect(renderer, &shadow);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
+
+    if (playPhase == PlayPhase::CHASING) {
+        // goose chasing
+        advanceAnimation(assets.goose_run);
+        renderAnimation(assets.goose_run,
+            static_cast<int>(gooseWalkerX),
+            static_cast<int>(gooseWalkerY),
+            circleScale * 1.5f);  // goose is 64px so smaller scale
+
+        // IT running away
+        advanceAnimation(assets.it_walk_bounce);
+        renderAnimation(assets.it_walk_bounce,
+            static_cast<int>(itWalkerX),
+            static_cast<int>(itWalkerY),
+            circleScale * 3.0f);
+
+        renderTapMeter();
+
+        Sprite tap = renderTextSprite("[ SPACE ] to tap!", { 0,0,0,255 }, 0);
+        SDL_Rect tapDst = {
+            baseWidth / 2 - tap.src_width / 2, 560,
+            tap.src_width, tap.src_height
+        };
+        SDL_RenderCopy(renderer, tap.texture, nullptr, &tapDst);
+        SDL_DestroyTexture(tap.texture);
+    }
     for (int i = 0; i < count; i++) {
-        // skip IT slot when walker is active — shadow handles the empty spot
         if (i == itIndex && (playPhase == PlayPhase::WALKING ||
             playPhase == PlayPhase::CHOOSING_DIRECTION))
+            continue;
+        if (i == gooseIndex && playPhase == PlayPhase::CHASING)
             continue;
 
         int x = cx + static_cast<int>(circleRadius * cos(step * i)) - 16;
@@ -693,14 +777,21 @@ void Game::renderGame() {
             Uint8 alpha = 255;
             if (elapsed > CALLOUT_DURATION - 300)
                 alpha = static_cast<Uint8>(255 * (CALLOUT_DURATION - elapsed) / 300.0f);
+
             SDL_Texture* tex = (activeCallout == CalloutType::DUCK)
                 ? assets.duckCallout.texture
                 : assets.gooseCallout.texture;
-            SDL_Rect callDst;
-            if (activeCallout == CalloutType::DUCK)
-                callDst = { calloutTargetX - 50, calloutTargetY - 50, 100, 100 };
-            else
-                callDst = { calloutTargetX - 80, calloutTargetY - 41, 160, 82 };
+
+            int callW = (activeCallout == CalloutType::DUCK) ? 100 : 160;
+            int callH = (activeCallout == CalloutType::DUCK) ? 100 : 82;
+            int callX = calloutTargetX - callW / 2;
+            int callY = calloutTargetY - callH;
+
+            // clamp to screen
+            callX = max(0, min(callX, baseWidth - callW));
+            callY = max(0, min(callY, baseHeight - callH));
+
+            SDL_Rect callDst = { callX, callY, callW, callH };
             SDL_SetTextureAlphaMod(tex, alpha);
             SDL_RenderCopy(renderer, tex, nullptr, &callDst);
             SDL_SetTextureAlphaMod(tex, 255);
@@ -717,8 +808,14 @@ void Game::renderGame() {
     case PlayPhase::CHOOSING_DIRECTION: {
         Sprite itLabel = renderTextSprite(
             activePlayers[itIndex].name + " is IT!", { 0,0,0,255 }, 0);
-        SDL_Rect itLabelBoxDst = { 10, 20, 346, 71 };
-        SDL_Rect labelDst = { 10, 46, itLabel.src_width, itLabel.src_height };
+        SDL_Rect itLabelBoxDst = { 10, 20, 500, 71 };
+        SDL_Rect labelDst = {
+                50,
+                20 + 71 / 2 - itLabel.src_height / 2,  // vertically centered in box
+                itLabel.src_width,
+                itLabel.src_height
+        };        
+        
         SDL_RenderCopy(renderer, assets.itLabelBox.texture, nullptr, &itLabelBoxDst);
         SDL_RenderCopy(renderer, itLabel.texture, nullptr, &labelDst);
         SDL_DestroyTexture(itLabel.texture);
@@ -733,100 +830,111 @@ void Game::renderGame() {
         break;
     }
 
-    case PlayPhase::CHASING:
-        renderTapMeter();
-        break;
-
     default: break;
     }
 }
 
-void Game::renderOptions()
-{
-
-}
-
 void Game::renderTapMeter() {
-    int barX = 720;
-    int barY = 60;
-    int barW = 50;
-    int barH = 480;
+    int barX = 700;
+    int barY = 80;
+    int barH = 440;
+    int leftW = 40;
+    int rightW = 20;
+    int gap = 6;
 
-    int innerX = barX + 8;
-    int innerY = barY + 8;
-    int innerW = barW - 16;
-    int innerH = barH - 16;
+    int leftX = barX;
+    int leftInnerX = leftX + 4;
+    int leftInnerY = barY + 4;
+    int leftInnerW = leftW - 8;
+    int leftInnerH = barH - 8;
 
-    //PNG behind everything
-    SDL_Rect barDst = { barX, barY, barW, barH };
-    SDL_RenderCopy(renderer, assets.tapBarUI.texture, nullptr, &barDst);
+    // background
+    SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
+    SDL_Rect leftBg = { leftX, barY, leftW, barH };
+    SDL_RenderFillRect(renderer, &leftBg);
 
-    //green fill bottom up
-    int fillH = static_cast<int>(innerH * tapEnergy);
+    // green fill — bottom up
+    int fillH = static_cast<int>(leftInnerH * tapEnergy);
     SDL_SetRenderDrawColor(renderer, 60, 200, 60, 255);
-    SDL_Rect fill = { innerX, innerY + innerH - fillH, innerW, fillH };
+    SDL_Rect fill = {
+        leftInnerX,
+        leftInnerY + leftInnerH - fillH,
+        leftInnerW,
+        fillH
+    };
     SDL_RenderFillRect(renderer, &fill);
 
-    //yellow target zone
-    int zoneSize = static_cast<int>(innerH * 0.1f);
-    int zoneY = innerY + static_cast<int>(innerH * (1.0f - targetPos)) - zoneSize / 2;
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 255, 220, 0, 200);
-    SDL_Rect zone = { innerX, zoneY, innerW, zoneSize };
-    SDL_RenderFillRect(renderer, &zone);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    // target line — from bottom, same system as fill
+    int lineY = leftInnerY + leftInnerH - static_cast<int>(leftInnerH * targetPos);
+    SDL_SetRenderDrawColor(renderer, 255, 50, 50, 255);
+    SDL_RenderDrawLine(renderer, leftInnerX, lineY - 1, leftInnerX + leftInnerW, lineY - 1);
+    SDL_RenderDrawLine(renderer, leftInnerX, lineY, leftInnerX + leftInnerW, lineY);
+    SDL_RenderDrawLine(renderer, leftInnerX, lineY + 1, leftInnerX + leftInnerW, lineY + 1);
 
-    //PNG again on top so the border covers the fill edges
-    SDL_RenderCopy(renderer, assets.tapBarUI.texture, nullptr, &barDst);
+    // border
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawRect(renderer, &leftBg);
 
-    //color changing urgency tint on the casing
+    // right bar — urgency drain
+    int rightX = leftX + leftW + gap;
+    int rightInnerX = rightX + 3;
+    int rightInnerY = barY + 3;
+    int rightInnerW = rightW - 6;
+    int rightInnerH = barH - 6;
+
+    SDL_SetRenderDrawColor(renderer, 80, 45, 10, 255);
+    SDL_Rect rightBg = { rightX, barY, rightW, barH };
+    SDL_RenderFillRect(renderer, &rightBg);
+
     float urgency = static_cast<float>(barChangeCount) / maxBarChanges;
-    Uint8 g = static_cast<Uint8>(165 * (1.0f - urgency));
-    SDL_SetTextureColorMod(assets.tapBarUI.texture, 255, g, 0);
-    SDL_RenderCopy(renderer, assets.tapBarUI.texture, nullptr, &barDst);
-    SDL_SetTextureColorMod(assets.tapBarUI.texture, 255, 255, 255);
+    float drainLevel = 1.0f - urgency;
+    int drainH = static_cast<int>(rightInnerH * drainLevel);
+    Uint8 r = static_cast<Uint8>(255 * urgency);
+    Uint8 g = static_cast<Uint8>(200 * (1.0f - urgency));
+    SDL_SetRenderDrawColor(renderer, r, g, 0, 255);
+    SDL_Rect drain = { rightInnerX, rightInnerY, rightInnerW, drainH };
+    SDL_RenderFillRect(renderer, &drain);
 
-    //pips above bar
-    int pipY = barY - 20;
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawRect(renderer, &rightBg);
+
+    // pips
+    int pipY = barY - 18;
+    int pipW = (leftW + gap + rightW) / maxBarChanges - 2;
     for (int i = 0; i < maxBarChanges; i++) {
         SDL_SetRenderDrawColor(renderer,
-            i < barChangeCount ? 60 : 160,
-            i < barChangeCount ? 200 : 160,
+            i < barChangeCount ? 60 : 120,
+            i < barChangeCount ? 200 : 120,
             60, 255);
-        SDL_Rect pip = { barX + (i * (barW / maxBarChanges)), pipY, (barW / maxBarChanges) - 2, 12 };
+        SDL_Rect pip = { leftX + i * (pipW + 2), pipY, pipW, 10 };
         SDL_RenderFillRect(renderer, &pip);
     }
 
     // FASTER! warning
     if (urgency > 0.5f) {
-        SDL_Color warningColor = { 255, static_cast<Uint8>(220 * (1.0f - urgency)), 0, 255 };
-        Sprite warn = renderTextSprite("FASTER!", warningColor, 0);
-        SDL_Rect warnDst = { barX - warn.src_width / 2 + barW / 2, barY + barH + 8,
-                             warn.src_width, warn.src_height };
+        SDL_Color warnColor = { 255, static_cast<Uint8>(200 * (1.0f - urgency)), 0, 255 };
+        Sprite warn = renderTextSprite("FASTER!", warnColor, 0);
+        SDL_Rect warnDst = {
+            leftX + (leftW + gap + rightW) / 2 - warn.src_width / 2,
+            barY + barH + 8,
+            warn.src_width,
+            warn.src_height
+        };
         SDL_RenderCopy(renderer, warn.texture, nullptr, &warnDst);
         SDL_DestroyTexture(warn.texture);
     }
 }
 
-void Game::renderPause()
-{
-
-}
-
 void Game::renderRoundEnd() {
-    // background
     SDL_Rect bg = { 0, 0, baseWidth, baseHeight };
     SDL_RenderCopy(renderer, assets.bgTile.texture, nullptr, &bg);
 
-    // cooking pot panel — left side
-    SDL_Rect panelDst = {18, 78, 591, 405};
+    SDL_Rect panelDst = { 18, 78, 591, 405 };
     SDL_RenderCopy(renderer, assets.cookingPotListUI.texture, nullptr, &panelDst);
 
-    // round result title — top right
     SDL_Rect resultDst = { 489, 44, 285, 154 };
     SDL_RenderCopy(renderer, assets.roundResultUI.texture, nullptr, &resultDst);
 
-    // scroll up indicator inside panel
     if (cookingPotScroll > 0) {
         Sprite up = renderTextSprite("^ more ^", { 80,80,80,255 }, 0);
         SDL_Rect upDst = { 60, 148, up.src_width, up.src_height };
@@ -834,8 +942,6 @@ void Game::renderRoundEnd() {
         SDL_DestroyTexture(up.texture);
     }
 
-    // scrollable player list — text safe zone inside the panel
-  
     int listX = 85;
     int listY = 214;
     int entryH = 36;
@@ -850,7 +956,6 @@ void Game::renderRoundEnd() {
         listY += entryH;
     }
 
-    // scroll down indicator
     if (visibleEnd < (int)cookingPot.size()) {
         Sprite down = renderTextSprite("v more v", { 80,80,80,255 }, 0);
         SDL_Rect downDst = { 60, listY, down.src_width, down.src_height };
@@ -858,52 +963,55 @@ void Game::renderRoundEnd() {
         SDL_DestroyTexture(down.texture);
     }
 
-    // winner display if only one left — shown in the right side space
-    if (circle.getSize() == 1) {
-        Sprite win = renderTextSprite(activePlayers[0].name + " WINS!", { 255,220,0,255 }, 0);
-        SDL_Rect winDst = { 510, 220, win.src_width, win.src_height };
-        SDL_RenderCopy(renderer, win.texture, nullptr, &winDst);
-        SDL_DestroyTexture(win.texture);
+    // effective remaining = circle size minus any pending elimination
+    int effectiveRemaining = circle.getSize() - (pendingElimination ? 1 : 0);
+    if (effectiveRemaining <= 1) {
+        if (pendingElimination && eliminatedIndex >= 0) {
+            addToPot(activePlayers[eliminatedIndex]);
+            activePlayers.erase(activePlayers.begin() + eliminatedIndex);
+            circle.remove(eliminatedIndex);
+            if (itIndex > eliminatedIndex) itIndex--;
+            pendingElimination = false;
+            eliminatedIndex = -1;
+        }
+        winnerName = activePlayers.empty() ? "Nobody" : activePlayers[0].name;
+        state = GameState::GAME_OVER;
+        needstoRedraw = true;
+        return; // don't render round end at all
     }
 
-    // buttons
     renderButton(assets.quitRoundBtn);
-    renderButton(assets.continueBtn);
-}
 
+    if (effectiveRemaining > 1) {
+        renderButton(assets.continueBtn);
+    }
+}
 void Game::renderGameOver() {
     SDL_Rect bg = { 0, 0, baseWidth, baseHeight };
     SDL_RenderCopy(renderer, assets.bgTile.texture, nullptr, &bg);
 
-    // winner box — centered, upper area
     SDL_Rect winBoxDst = { baseWidth / 2 - 250, 120, 500, 196 };
     SDL_RenderCopy(renderer, assets.winnerBox.texture, nullptr, &winBoxDst);
 
-    // winner name — rendered inside the box text area
-    // box has "Winner:" baked in on the left, name goes to the right of it
-    if (!winnerName.empty()) {
-        Sprite name = renderTextSprite(winnerName, { 255,220,0,255 }, 0);
-        SDL_Rect nameDst = {
-            baseWidth / 2 - 250 + 200,  // offset past "Winner:" text
-            120 + 196 / 2 - name.src_height / 2 + 20,
-            name.src_width,
-            name.src_height
-        };
-        SDL_RenderCopy(renderer, name.texture, nullptr, &nameDst);
-        SDL_DestroyTexture(name.texture);
-    }
+    // winner name
+    std::string displayName = winnerName.empty() ? "Nobody" : winnerName;
+    Sprite name = renderTextSprite(displayName, { 0, 0, 0, 255 }, 0);
+    SDL_Rect nameDst = {
+        baseWidth / 2 - name.src_width / 2,
+        120 + 196 / 2 - name.src_height / 2 + 30,
+        name.src_width,
+        name.src_height
+    };
+    SDL_RenderCopy(renderer, name.texture, nullptr, &nameDst);
+    SDL_DestroyTexture(name.texture);
 
-    // play again — bottom left
     renderButton(assets.playAgainBtn);
-    // quit — bottom right
     renderButton(assets.gameOverQuitBtn);
 }
-
 //Event Handling
 void Game::handleEvents(SDL_Event& e, bool& running) {
     while (SDL_PollEvent(&e)) {
 
-        //quit
         if (e.type == SDL_QUIT) {
             running = false;
             return;
@@ -922,7 +1030,7 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
             continue;
         }
 
-        //mouse motion 
+        // mouse motion
         if (e.type == SDL_MOUSEMOTION) {
             int mx, my;
             getLogicalMouse(mx, my);
@@ -930,11 +1038,9 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
             switch (state) {
             case GameState::MAIN_MENU:
                 assets.playButton.isHovered = isHovered(assets.playButton.rect, mx, my);
-                assets.optionsButton.isHovered = isHovered(assets.optionsButton.rect, mx, my);
                 assets.quitButton.isHovered = isHovered(assets.quitButton.rect, mx, my);
-                if (assets.playButton.isHovered)    menuSelection = 0;
-                if (assets.optionsButton.isHovered) menuSelection = 1;
-                if (assets.quitButton.isHovered)    menuSelection = 2;
+                if (assets.playButton.isHovered) menuSelection = 0;
+                if (assets.quitButton.isHovered) menuSelection = 1;
                 break;
 
             case GameState::PLAYER_SETUP:
@@ -978,7 +1084,6 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
                     state = GameState::PLAYER_SETUP;
                     SDL_StartTextInput();
                 }
-                if (isHovered(assets.optionsButton.rect, mx, my)) state = GameState::OPTIONS;
                 if (isHovered(assets.quitButton.rect, mx, my)) running = false;
                 break;
 
@@ -1008,12 +1113,14 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
                     if (isHovered(assets.dirLeftBtn.rect, mx, my)) {
                         goingClockwise = false;
                         selectedIndex = itIndex;
+                        selectedIndex = (selectedIndex - 1 + circle.getSize()) % circle.getSize();
                         updateITWalkerTarget();
                         playPhase = PlayPhase::WALKING;
                     }
                     if (isHovered(assets.dirRightBtn.rect, mx, my)) {
                         goingClockwise = true;
                         selectedIndex = itIndex;
+                        selectedIndex = (selectedIndex + 1) % circle.getSize();
                         updateITWalkerTarget();
                         playPhase = PlayPhase::WALKING;
                     }
@@ -1043,6 +1150,24 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
                         targetPos = 0.25f + static_cast<float>(rand()) /
                             (static_cast<float>(RAND_MAX / 0.65f));
                         chaseActive = true;
+                        chaseStarted = true;
+                        chaseStartTime = SDL_GetTicks();
+
+                        selectedIndex = itIndex;
+                        updateITWalkerTarget();
+                        itWalkerX = itWalkerTargetX;
+                        itWalkerY = itWalkerTargetY;
+
+                        gooseWalkerIndex = goingClockwise
+                            ? (gooseIndex - 1 + circle.getSize()) % circle.getSize()
+                            : (gooseIndex + 1) % circle.getSize();
+                        updateGooseWalkerTarget();
+                        gooseWalkerX = gooseWalkerTargetX;
+                        gooseWalkerY = gooseWalkerTargetY;
+
+                        gooseLastStep = SDL_GetTicks();
+                        itChaseLastStep = SDL_GetTicks();
+
                         playPhase = PlayPhase::CHASING;
                         activeCallout = CalloutType::GOOSE;
                         calloutTimer = SDL_GetTicks();
@@ -1060,7 +1185,7 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
             needstoRedraw = true;
         }
 
-        //text input
+        // text input
         if (e.type == SDL_TEXTINPUT) {
             if (state == GameState::PLAYER_SETUP) {
                 if (currentInput.length() < MAX_NAME_LENGTH) {
@@ -1070,7 +1195,7 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
             }
         }
 
-        //keydown presses
+        // keydown
         if (e.type == SDL_KEYDOWN) {
             switch (state) {
             case GameState::SPLASH:
@@ -1080,18 +1205,16 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
 
             case GameState::MAIN_MENU:
                 if (e.key.keysym.sym == SDLK_UP || e.key.keysym.sym == SDLK_LEFT)
-                    menuSelection = (menuSelection - 1 + 3) % 3;
+                    menuSelection = (menuSelection - 1 + 2) % 2;
                 if (e.key.keysym.sym == SDLK_DOWN || e.key.keysym.sym == SDLK_RIGHT)
-                    menuSelection = (menuSelection + 1) % 3;
+                    menuSelection = (menuSelection + 1) % 2;
 
                 assets.playButton.isHovered = (menuSelection == 0);
-                assets.optionsButton.isHovered = (menuSelection == 1);
-                assets.quitButton.isHovered = (menuSelection == 2);
+                assets.quitButton.isHovered = (menuSelection == 1);
 
                 if (e.key.keysym.sym == SDLK_RETURN) {
                     if (menuSelection == 0) { state = GameState::PLAYER_SETUP; SDL_StartTextInput(); }
-                    if (menuSelection == 1)   state = GameState::OPTIONS;
-                    if (menuSelection == 2)   running = false;
+                    if (menuSelection == 1) running = false;
                 }
                 needstoRedraw = true;
                 break;
@@ -1115,11 +1238,6 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
                 needstoRedraw = true;
                 break;
 
-            case GameState::PAUSED:
-                if (e.key.keysym.sym == SDLK_ESCAPE) state = GameState::PLAYING;
-                needstoRedraw = true;
-                break;
-
             default:
                 if (e.key.keysym.sym == SDLK_ESCAPE) running = false;
                 break;
@@ -1127,16 +1245,6 @@ void Game::handleEvents(SDL_Event& e, bool& running) {
         }
     }
 }
-
-//STUBBED
-void Game::handleMenuEvents(SDL_Event& e, bool& running)
-{
-    
-}
-
-//STUBBED
-void Game::handleOptionsEvents(SDL_Event& e, bool& running)
-{}
 
 void Game::handleSetupEvents(SDL_Event& e, bool& running) {
     if (e.type == SDL_TEXTINPUT) {
@@ -1260,10 +1368,16 @@ void Game::handleGameEvents(SDL_Event& e, bool& running) {
     case PlayPhase::CHOOSING_DIRECTION:
         if (e.key.keysym.sym == SDLK_LEFT) {
             goingClockwise = false;
+            selectedIndex = itIndex;
+            selectedIndex = (selectedIndex - 1 + circle.getSize()) % circle.getSize();
+            updateITWalkerTarget();
             playPhase = PlayPhase::WALKING;
         }
         if (e.key.keysym.sym == SDLK_RIGHT) {
             goingClockwise = true;
+            selectedIndex = itIndex;
+            selectedIndex = (selectedIndex + 1) % circle.getSize();
+            updateITWalkerTarget();
             playPhase = PlayPhase::WALKING;
         }
         break;
@@ -1278,7 +1392,6 @@ void Game::handleGameEvents(SDL_Event& e, bool& running) {
                 ? (selectedIndex - 1 + circle.getSize()) % circle.getSize()
                 : (selectedIndex + 1) % circle.getSize();
             updateITWalkerTarget();
-            // DUCK callout on left arrow
             activeCallout = CalloutType::DUCK;
             calloutTimer = SDL_GetTicks();
             calloutTargetX = static_cast<int>(itWalkerX);
@@ -1293,7 +1406,6 @@ void Game::handleGameEvents(SDL_Event& e, bool& running) {
                 ? (selectedIndex + 1) % circle.getSize()
                 : (selectedIndex - 1 + circle.getSize()) % circle.getSize();
             updateITWalkerTarget();
-            // DUCK callout on right arrow
             activeCallout = CalloutType::DUCK;
             calloutTimer = SDL_GetTicks();
             calloutTargetX = static_cast<int>(itWalkerX);
@@ -1308,44 +1420,64 @@ void Game::handleGameEvents(SDL_Event& e, bool& running) {
             targetPos = 0.25f + static_cast<float>(rand()) /
                 (static_cast<float>(RAND_MAX / 0.65f));
             chaseActive = true;
+            chaseStarted = true;
+            chaseStartTime = SDL_GetTicks();
+
+            selectedIndex = itIndex;
+            updateITWalkerTarget();
+            itWalkerX = itWalkerTargetX;
+            itWalkerY = itWalkerTargetY;
+
+            gooseWalkerIndex = goingClockwise
+                ? (gooseIndex - 1 + circle.getSize()) % circle.getSize()
+                : (gooseIndex + 1) % circle.getSize();
+            updateGooseWalkerTarget();
+            gooseWalkerX = gooseWalkerTargetX;
+            gooseWalkerY = gooseWalkerTargetY;
+
+            gooseLastStep = SDL_GetTicks();
+            itChaseLastStep = SDL_GetTicks();
+
             playPhase = PlayPhase::CHASING;
-            // GOOSE callout
             activeCallout = CalloutType::GOOSE;
             calloutTimer = SDL_GetTicks();
             calloutTargetX = static_cast<int>(itWalkerX);
             calloutTargetY = static_cast<int>(itWalkerY) - 60;
         }
         break;
-    /* NEEDS FORMAL DOCUMENTATION */
+
     case PlayPhase::CHASING:
         if (e.key.keysym.sym == SDLK_SPACE || e.key.keysym.sym == SDLK_UP) {
+            float prevEnergy = tapEnergy;
             tapEnergy += meterFill;
             if (tapEnergy > 1.0f) tapEnergy = 1.0f;
 
-            float zoneSize = 0.1f;
+            float zoneSize = 0.12f;
             float zoneBottom = targetPos - zoneSize / 2;
             float zoneTop = targetPos + zoneSize / 2;
 
-            if (tapEnergy >= zoneBottom && tapEnergy <= zoneTop) {
+            // hit if we crossed through or landed in the zone
+            bool hit = (prevEnergy < zoneBottom && tapEnergy >= zoneBottom)
+                || (tapEnergy >= zoneBottom && tapEnergy <= zoneTop);
+
+            if (hit) {
                 barChangeCount++;
+                tapEnergy = 0.0f;
                 targetPos = 0.1f + static_cast<float>(rand()) /
                     (static_cast<float>(RAND_MAX / 0.8f));
 
-                float successThreshold = maxBarChanges * 0.7f;
-
                 if (barChangeCount >= maxBarChanges) {
-                    // IT tagged — defer removal until round end
-                    setRole(activePlayers[itIndex], DUCK);
+                    addToPot(activePlayers[itIndex]);
+                    int taggedIndex = itIndex;
+                    setRole(activePlayers[taggedIndex], DUCK);
                     pendingElimination = true;
-                    eliminatedIndex = itIndex;
+                    eliminatedIndex = taggedIndex;
                     itIndex = gooseIndex;
                     setRole(activePlayers[itIndex], IT);
                     chaseActive = false;
                     updateITWalkerTarget();
                     playPhase = PlayPhase::CHOOSING_DIRECTION;
-
-                    if (circle.getSize() - 1 <= 1) {
-                        addToPot(activePlayers[eliminatedIndex]);
+                    if (circle.getSize() - 1 <= 0) {
                         activePlayers.erase(activePlayers.begin() + eliminatedIndex);
                         circle.remove(eliminatedIndex);
                         if (itIndex > eliminatedIndex) itIndex--;
@@ -1358,33 +1490,32 @@ void Game::handleGameEvents(SDL_Event& e, bool& running) {
                         state = GameState::ROUND_END;
                     }
                 }
-                else if (barChangeCount >= successThreshold) {
-                    // IT escaped — goose becomes IT
-                    int oldIt = itIndex;
-                    itIndex = gooseIndex;
-                    selectedIndex = oldIt;
-                    setRole(activePlayers[itIndex], IT);
-                    setRole(activePlayers[selectedIndex], DUCK);
-                    chaseActive = false;
-                    updateITWalkerTarget();
-                    playPhase = PlayPhase::CHOOSING_DIRECTION;
-
-                    if (circle.getSize() <= 1) {
-                        winnerName = activePlayers.empty() ? "Nobody" : activePlayers[0].name;
-                        state = GameState::GAME_OVER;
-                    }
-                    else {
-                        state = GameState::ROUND_END;
+                else {
+                    float successThreshold = maxBarChanges * 0.7f;
+                    if (barChangeCount >= successThreshold) {
+                        int oldIt = itIndex;
+                        itIndex = gooseIndex;
+                        selectedIndex = oldIt;
+                        setRole(activePlayers[itIndex], IT);
+                        setRole(activePlayers[selectedIndex], DUCK);
+                        chaseActive = false;
+                        updateITWalkerTarget();
+                        playPhase = PlayPhase::CHOOSING_DIRECTION;
+                        if (circle.getSize() - (pendingElimination ? 1 : 0) <= 1) {
+                            winnerName = activePlayers.empty() ? "Nobody" : activePlayers[0].name;
+                            state = GameState::GAME_OVER;
+                        }
+                        else {
+                            state = GameState::ROUND_END;
+                        }
                     }
                 }
             }
         }
-        if (e.key.keysym.sym == SDLK_ESCAPE) state = GameState::PAUSED;
         break;
     }
     needstoRedraw = true;
 }
-
 //STUBBED
 void Game::handlePauseEvents(SDL_Event & e, bool& running)
 {}
@@ -1408,9 +1539,8 @@ void Game::handleRoundEndEvents(SDL_Event& e, bool& running) {
         int mx, my;
         getLogicalMouse(mx, my);
         if (isHovered(assets.continueBtn.rect, mx, my)) {
-            if (circle.getSize() <= 1) {
+            if (circle.getSize() - (pendingElimination ? 1 : 0) <= 1) {
                 if (pendingElimination && eliminatedIndex >= 0) {
-                    addToPot(activePlayers[eliminatedIndex]);
                     activePlayers.erase(activePlayers.begin() + eliminatedIndex);
                     circle.remove(eliminatedIndex);
                     pendingElimination = false;
@@ -1424,8 +1554,10 @@ void Game::handleRoundEndEvents(SDL_Event& e, bool& running) {
             }
             needstoRedraw = true;
         }
-        if (isHovered(assets.quitRoundBtn.rect, mx, my))
+        if (isHovered(assets.quitRoundBtn.rect, mx, my)) {
+            resetGame();
             state = GameState::SPLASH;
+        }
         needstoRedraw = true;
     }
     if (e.type == SDL_KEYDOWN) {
@@ -1434,9 +1566,8 @@ void Game::handleRoundEndEvents(SDL_Event& e, bool& running) {
         if (e.key.keysym.sym == SDLK_DOWN)
             cookingPotScroll = min((int)cookingPot.size() - POT_VISIBLE, cookingPotScroll + 1);
         if (e.key.keysym.sym == SDLK_RETURN) {
-            if (circle.getSize() <= 1) {
+            if (circle.getSize() - (pendingElimination ? 1 : 0) <= 1) {
                 if (pendingElimination && eliminatedIndex >= 0) {
-                    addToPot(activePlayers[eliminatedIndex]);
                     activePlayers.erase(activePlayers.begin() + eliminatedIndex);
                     circle.remove(eliminatedIndex);
                     pendingElimination = false;
@@ -1449,8 +1580,10 @@ void Game::handleRoundEndEvents(SDL_Event& e, bool& running) {
                 startNextRound();
             }
         }
-        if (e.key.keysym.sym == SDLK_ESCAPE)
+        if (e.key.keysym.sym == SDLK_ESCAPE) {
+            resetGame();
             state = GameState::SPLASH;
+        }
         needstoRedraw = true;
     }
 }
@@ -1467,19 +1600,7 @@ void Game::handleGameOverEvents(SDL_Event& e, bool& running) {
         int mx, my;
         getLogicalMouse(mx, my);
         if (isHovered(assets.playAgainBtn.rect, mx, my)) {
-            activePlayers.clear();
-            cookingPot.clear();
-            circle.~DCList();
-            new (&circle) DCList();
-            winnerName = "";
-            cookingPotScroll = 0;
-            circleRadius = 180.0f; circleTargetRadius = 180.0f;
-            circleCY = 300.0f; circleTargetCY = 300.0f;
-            circleScale = 1.0f;   circleTargetScale = 1.0f;
-            pendingElimination = false;
-            eliminatedIndex = -1;
-            state = GameState::PLAYER_SETUP;
-            SDL_StartTextInput();
+            resetGame();
         }
         if (isHovered(assets.gameOverQuitBtn.rect, mx, my))
             state = GameState::SPLASH;
@@ -1487,19 +1608,7 @@ void Game::handleGameOverEvents(SDL_Event& e, bool& running) {
     }
     if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.sym == SDLK_RETURN) {
-            activePlayers.clear();
-            cookingPot.clear();
-            circle.~DCList();
-            new (&circle) DCList();
-            winnerName = "";
-            cookingPotScroll = 0;
-            circleRadius = 180.0f; circleTargetRadius = 180.0f;
-            circleCY = 300.0f; circleTargetCY = 300.0f;
-            circleScale = 1.0f;   circleTargetScale = 1.0f;
-            pendingElimination = false;
-            eliminatedIndex = -1;
-            state = GameState::PLAYER_SETUP;
-            SDL_StartTextInput();
+            resetGame();
         }
         if (e.key.keysym.sym == SDLK_ESCAPE)
             state = GameState::SPLASH;
@@ -1509,16 +1618,49 @@ void Game::handleGameOverEvents(SDL_Event& e, bool& running) {
 
 void Game::updatePos() {
     if (playPhase != PlayPhase::CHASING) return;
+    if (SDL_GetTicks() - chaseStartTime < 1000) return;
 
     float urgency = static_cast<float>(barChangeCount) / maxBarChanges;
-    meterDecay = 0.002f + (urgency * 0.003f); // per frame values
+    meterDecay = 0.0008f + (urgency * 0.0015f);
 
     tapEnergy -= meterDecay;
     if (tapEnergy < 0.0f) tapEnergy = 0.0f;
 
+    if (tapEnergy <= 0.0f && chaseActive) {
+        // bounds check before doing anything
+        if (itIndex < 0 || itIndex >= (int)activePlayers.size()) return;
+        if (gooseIndex < 0 || gooseIndex >= (int)activePlayers.size()) return;
+
+        addToPot(activePlayers[itIndex]);
+        setRole(activePlayers[itIndex], DUCK);
+        int savedEliminated = itIndex;
+        int savedNewIt = gooseIndex;
+
+        // adjust savedNewIt if it will shift after erase
+        pendingElimination = true;
+        eliminatedIndex = savedEliminated;
+        itIndex = savedNewIt;
+        setRole(activePlayers[itIndex], IT);
+        chaseActive = false;
+        updateITWalkerTarget();
+        playPhase = PlayPhase::CHOOSING_DIRECTION;
+
+        if (circle.getSize() - 1 <= 0) {
+            activePlayers.erase(activePlayers.begin() + eliminatedIndex);
+            circle.remove(eliminatedIndex);
+            if (itIndex > eliminatedIndex) itIndex--;
+            pendingElimination = false;
+            eliminatedIndex = -1;
+            winnerName = activePlayers.empty() ? "Nobody" : activePlayers[0].name;
+            state = GameState::GAME_OVER;
+        }
+        else {
+            state = GameState::ROUND_END;
+        }
+    }
+
     needstoRedraw = true;
 }
-
 Game::Player Game::createPlayer(std::string name) {
     if (circle.getSize() >= 20) return Player(); // max 20 players
 
@@ -1526,7 +1668,7 @@ Game::Player Game::createPlayer(std::string name) {
     p.name = name;
     p.status = DUCK;
     p.playerID = static_cast<int>(circle.getSize()); // placeholder ID logic
-    p.nameSprite = renderTextSprite(name, { 255, 255, 255, 255 }, 0); // white
+    p.nameSprite = renderTextSprite(name, {0,0,0,255 }, 0); // white
     registeredTextures.push_back(p.nameSprite.texture);
 
     circle.insert(p.name, p.playerID);
@@ -1552,10 +1694,11 @@ void Game::addToPot(const Player& player) {
 
 void Game::createCircle() {
     int count = circle.getSize();
-    itIndex = rand() % count;      // predetermined, but don't reveal yet
+    pendingItIndex = rand() % count;   // store separately
+    itIndex = 0;                        // reset itIndex to 0 during spin
     spinIndex = 0;
-    spinSpeed = 50;                // fast at first
-    spinStepsLeft = 20 + (count * 3) + itIndex; // lands exactly on itIndex
+    spinSpeed = 50;
+    spinStepsLeft = 20 + (count * 3) + pendingItIndex;
     isSpinning = true;
     playPhase = PlayPhase::SPINNING;
     state = GameState::PLAYING;
@@ -1565,21 +1708,17 @@ void Game::createCircle() {
 void Game::play() {
     bool running = true;
     SDL_Event e;
-    Uint32 lastUpdate = SDL_GetTicks();
     Uint32 now = 0;
 
     while (running) {
         now = SDL_GetTicks();
 
-        // event handler
         handleEvents(e, running);
 
-        // delta time for animation
-        // must come before anything that uses deltaTime
         float deltaTime = (now - fadeTimer) / 1000.0f;
         fadeTimer = now;
 
-        // splash screen fade out
+        // splash fade
         if (state == GameState::SPLASH) {
             if (fadingOut) {
                 fadeAlpha -= fadeSpeed * deltaTime;
@@ -1599,48 +1738,101 @@ void Game::play() {
             needstoRedraw = true;
         }
 
-        //gameplay update
-        if (state == GameState::PLAYING) {
+        // chase — goose and IT walker movement
+        if (state == GameState::PLAYING && playPhase == PlayPhase::CHASING) {
+            Uint32 gooseStepInterval = 1200;
+            if (now - gooseLastStep >= gooseStepInterval) {
+                if (gooseWalkerIndex != itIndex) {
+                    gooseWalkerIndex = goingClockwise
+                        ? (gooseWalkerIndex + 1) % circle.getSize()
+                        : (gooseWalkerIndex - 1 + circle.getSize()) % circle.getSize();
+                    updateGooseWalkerTarget();
 
+                    if (gooseWalkerIndex == itIndex) {
+                        if (itIndex >= 0 && itIndex < (int)activePlayers.size() &&
+                            gooseIndex >= 0 && gooseIndex < (int)activePlayers.size()) {
+                            addToPot(activePlayers[itIndex]);
+                            int taggedIndex = itIndex;
+                            setRole(activePlayers[taggedIndex], DUCK);
+                            pendingElimination = true;
+                            eliminatedIndex = taggedIndex;
+                            itIndex = gooseIndex;
+                            setRole(activePlayers[itIndex], IT);
+                            chaseActive = false;
+                            playPhase = PlayPhase::CHOOSING_DIRECTION;
+                            updateITWalkerTarget();
+
+                            if (circle.getSize() - 1 <= 0) {
+                                activePlayers.erase(activePlayers.begin() + eliminatedIndex);
+                                circle.remove(eliminatedIndex);
+                                if (itIndex > eliminatedIndex) itIndex--;
+                                pendingElimination = false;
+                                eliminatedIndex = -1;
+                                winnerName = activePlayers.empty() ? "Nobody" : activePlayers[0].name;
+                                state = GameState::GAME_OVER;
+                            }
+                            else {
+                                state = GameState::ROUND_END;
+                            }
+                        }
+                    }
+                }
+                gooseLastStep = now;
+            }
+
+            Uint32 itStepInterval = 900;
+            if (now - itChaseLastStep >= itStepInterval) {
+                selectedIndex = goingClockwise
+                    ? (selectedIndex + 1) % circle.getSize()
+                    : (selectedIndex - 1 + circle.getSize()) % circle.getSize();
+                updateITWalkerTarget();
+                itChaseLastStep = now;
+            }
+        }
+
+        // gameplay update
+        if (state == GameState::PLAYING) {
             updatePos();
 
-            // IT selection spin
+            // spin
             if (playPhase == PlayPhase::SPINNING) {
                 if (now - spinLastStep >= (Uint32)spinSpeed) {
                     spinIndex = (spinIndex + 1) % circle.getSize();
                     spinStepsLeft--;
 
                     if (spinStepsLeft < 10) spinSpeed += 30;
-                    if (spinStepsLeft < 5) spinSpeed += 50;
+                    if (spinStepsLeft < 5)  spinSpeed += 50;
 
                     if (spinStepsLeft <= 0) {
+                        itIndex = pendingItIndex;
                         setRole(activePlayers[itIndex], IT);
                         isSpinning = false;
                         updateITWalkerTarget();
-                        itWalkerX = itWalkerTargetX; // snap to start, no lerp
+                        itWalkerX = itWalkerTargetX;
                         itWalkerY = itWalkerTargetY;
-                        circleTargetRadius = 110.0f;  // tween circle up
+                        circleTargetRadius = 110.0f;
                         circleTargetCY = 200.0f;
                         circleTargetScale = 0.6f;
                         playPhase = PlayPhase::CHOOSING_DIRECTION;
                     }
-
                     spinLastStep = now;
                 }
             }
 
-            // circle + walker tween — runs every frame during gameplay
+            // tween
             float lerpSpeed = 5.0f * deltaTime;
             circleRadius = lerp(circleRadius, circleTargetRadius, lerpSpeed);
             circleCY = lerp(circleCY, circleTargetCY, lerpSpeed);
             circleScale = lerp(circleScale, circleTargetScale, lerpSpeed);
             itWalkerX = lerp(itWalkerX, itWalkerTargetX, lerpSpeed);
             itWalkerY = lerp(itWalkerY, itWalkerTargetY, lerpSpeed);
+            gooseWalkerX = lerp(gooseWalkerX, gooseWalkerTargetX, lerpSpeed);
+            gooseWalkerY = lerp(gooseWalkerY, gooseWalkerTargetY, lerpSpeed);
 
-            needstoRedraw = true; // always redraw during gameplay for animation
+            needstoRedraw = true;
         }
 
-        //RENDER
+        // render
         if (needstoRedraw) {
             SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
             SDL_RenderClear(renderer);
@@ -1648,11 +1840,9 @@ void Game::play() {
             switch (state) {
             case GameState::SPLASH:       renderSplash();    break;
             case GameState::MAIN_MENU:    renderMM();        break;
-            case GameState::OPTIONS:      renderOptions();   break;
             case GameState::PLAYER_SETUP: renderSetup();     break;
-            case GameState::CONFIGURE: renderConfigure(); break;
+            case GameState::CONFIGURE:    renderConfigure(); break;
             case GameState::PLAYING:      renderGame();      break;
-            case GameState::PAUSED:       renderPause();     break;
             case GameState::ROUND_END:    renderRoundEnd();  break;
             case GameState::GAME_OVER:    renderGameOver();  break;
             }

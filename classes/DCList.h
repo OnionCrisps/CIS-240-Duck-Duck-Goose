@@ -1,4 +1,7 @@
 //using DOXYGEN comments for documentation.
+
+/*Gavin Harban, Jon Moore, Game.h CIS 240-1 Data Structures Project*/
+
 #pragma once
 #include<string>
 #include<ostream>

@@ -1,3 +1,5 @@
+/*Gavin Harban, Jon Moore, Game.h CIS 240-1 Data Structures Project*/
+
 #include "DCList.h"
 
 DCList::DCList()

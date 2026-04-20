@@ -17,14 +17,13 @@ private:
     int calloutTargetX = 0; // screen position to show it near
     int calloutTargetY = 0;
 
+
     enum class GameState {
         SPLASH, 
         MAIN_MENU, 
-        OPTIONS, 
         PLAYER_SETUP,
         CONFIGURE,
         PLAYING, 
-        PAUSED, 
         ROUND_END, 
         GAME_OVER
     };
@@ -207,6 +206,16 @@ private:
     float itWalkerY = 0.0f;
     float itWalkerTargetX = 0.0f;
     float itWalkerTargetY = 0.0f;
+
+    // goose walker position — mirrors IT walker but behind
+    float gooseWalkerX = 0.0f;
+    float gooseWalkerY = 0.0f;
+    float gooseWalkerTargetX = 0.0f;
+    float gooseWalkerTargetY = 0.0f;
+    int   gooseWalkerIndex = 0; // which circle position goose is heading toward
+
+    Uint32 gooseLastStep = 0;   
+    Uint32 itChaseLastStep = 0;
     // tap meter
     float tapEnergy = 0.0f;   // current fill 0.0 - 1.0
     float targetPos = 0.5f;   // where the bar is (0.0 - 1.0)
@@ -216,6 +225,9 @@ private:
     int   barChangeCount = 0;      // how many times bar has moved
     int   maxBarChanges = 8;      // scales with player count
     bool  chaseActive = false;  // goose is currently chasing
+
+    bool chaseStarted = false; // add to Game.h members
+    Uint32 chaseStartTime = 0; // add to Game.h members
 
     // round
     int gooseIndex = -1;// who got called goose
@@ -247,6 +259,8 @@ private:
     bool blinkVisible = true;
     static constexpr Uint32 BLINK_INTERVAL = 500; // ms
 
+    int pendingItIndex = 0;  // the predetermined IT, revealed after spin
+
     //METHODS:
    
     // SDL lifecycle and helpers
@@ -267,9 +281,12 @@ private:
     float lerp(float a, float b, float t);
 
     void updateITWalkerTarget();
+    void updateGooseWalkerTarget();
+
     bool isHovered(const SDL_Rect& rect, int mx, int my);
 
     void startNextRound();
+    void resetGame();
 
     // renderers
 
@@ -281,19 +298,15 @@ private:
 
     void renderSplash();
     void renderMM();
-    void renderOptions();
     void renderSetup();
     void renderConfigure();
     void renderGame();
     void renderTapMeter();
-    void renderPause();
     void renderRoundEnd();
     void renderGameOver();
 
     // events
     void handleEvents(SDL_Event& e, bool& running);
-    void handleMenuEvents(SDL_Event& e, bool& running);
-    void handleOptionsEvents(SDL_Event& e, bool& running);
     void handleSetupEvents(SDL_Event& e, bool& running);
     void handleConfigureEvents(SDL_Event& e, bool& running);
     void handleGameEvents(SDL_Event& e, bool& running);
